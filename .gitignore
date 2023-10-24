@@ -50,3 +50,5 @@ l10n/
 *.pkl
 *.npy
 probconnatlas/
+src/__pycache__
+.ipynb_checkpoints/
