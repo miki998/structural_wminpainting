@@ -13,6 +13,7 @@ from sklearn.linear_model import Ridge, Lasso
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib import animation
 from matplotlib.pyplot import cm
 from mpl_toolkits.mplot3d import Axes3D
 
@@ -107,3 +108,71 @@ def abs_nifti(nifti):
     volume = nifti.get_fdata()    
     ret = nib.Nifti1Image(np.abs(volume), affine=affine)
     return ret
+
+
+### NI-EDU - copied code "GLM inference"
+def design_variance(X, which_predictor=1):
+    ''' Returns the design variance of a predictor (or contrast) in X.
+    
+    Parameters
+    ----------
+    X : numpy array
+        Array of shape (N, P)
+    which_predictor : int or list/array
+        The index of the predictor you want the design var from.
+        Note that 0 refers to the intercept!
+        Alternatively, "which_predictor" can be a contrast-vector
+        (which will be discussed later this lab).
+        
+    Returns
+    -------
+    des_var : float
+        Design variance of the specified predictor/contrast from X.
+    '''
+    
+    is_single = isinstance(which_predictor, int)
+    if is_single:
+        idx = which_predictor
+    else:
+        idx = np.array(which_predictor) != 0
+    
+    c = np.zeros(X.shape[1])
+    c[idx] = 1 if is_single == 1 else which_predictor[idx]
+    des_var = c.dot(np.linalg.inv(X.T.dot(X))).dot(c.T)
+    return des_var
+
+
+
+# table_t   = {}
+# residuals = {}
+# beta_fit  = {}
+# for b in range(len(select)):
+#     emotion    = select[b]
+#     emo_series = np.array(emo_df[emo_df.item==emotion]['score'])
+#     smoothened = overlap_add(emo_series, smfactor)
+#     z2         = zscore(smoothened[:n])
+#     y = deepcopy(z2)
+
+#     # regress solving
+#     X = regressors.T
+
+#     beta = (np.linalg.inv(np.matmul(X.T, X)) @ X.T) @ y
+
+#     y_hat_meter = X @ beta
+
+#     N = y.size
+#     P = X.shape[1]
+#     df = (N - P)
+    
+#     sigma_hat = np.sum((y - y_hat_meter) ** 2) / df
+#     design_variance_weight = design_variance(X, 1)
+    
+#     residuals[emotion] = sigma_hat
+#     # t-stats
+#     t_meter  = beta / np.sqrt(sigma_hat * design_variance_weight)
+
+#     # multiply by two to create a two-tailed p-value
+#     p_values = np.array([stats.t.sf(np.abs(t), df) * 2  for t in t_meter])
+
+#     table_t[emotion]  = (t_meter,p_values)
+#     beta_fit[emotion] = beta

@@ -23,7 +23,7 @@ def property_regularizer(x, C, norm='L2'):
         print('Unsupported Norm')
     return ret
 
-def optimize_lreg(X, y, prop, norm, num_epochs=1000, lr=1e-3, seed=99, verbose=False):
+def optimize_lreg(X, y, prop, norm, num_epochs=1000, lr=1e-3, seed=99, verbose=False, penalty=10):
     """
     Optimize linear regression parameters (MLP 1 layer) with property based regularizer
     """
@@ -39,13 +39,13 @@ def optimize_lreg(X, y, prop, norm, num_epochs=1000, lr=1e-3, seed=99, verbose=F
 
     Xtorch = torch.Tensor(X.T)
     ytorch = torch.Tensor(y[:,None])
-    for n in tqdm(range(num_epochs)):
+    for _ in tqdm(range(num_epochs), disable=(not verbose)):
         y_pred = lreg(Xtorch)
 
         # Add regularizer considering consistency of bundles
         reg_loss = property_regularizer(lreg[0].weight[0], torch.Tensor(prop), norm=norm)
         genloss = loss_func(y_pred, ytorch)
-        loss =  genloss + reg_loss
+        loss = genloss + penalty * reg_loss
         
         optimizer.zero_grad()
         loss.backward()

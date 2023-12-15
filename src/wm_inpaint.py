@@ -5,7 +5,7 @@ from src.fiberatlas_utils import *
 
 def pipeline_inpainting(path2probatlas='../atlas_data/fiber_atlas/probconnatlas/wm.connatlas.scale1.h5', 
                         path2restdata='../atlas_data/rstfMRI_eg/rst_fmri_moviedata/',
-                        region_of_interest=[], regularizer=0, norm='L2', 
+                        region_of_interest=[], normalizing=False, regularizer=0, norm='L2', 
                         weigthpath='./', voxelbundlepath='./',
                         inpaintpath='./'):
     """
@@ -130,9 +130,14 @@ def pipeline_inpainting(path2probatlas='../atlas_data/fiber_atlas/probconnatlas/
     # Save the space coords matching
     save(voxelbundlepath+'/bundlevox_coords.pkl', fmri_coords)
 
-    # reconstruct with all bundles
-    wm_inpainted_all, _ = interpolate_connectivity(fmri_coords, bundles_labels, lreg, corr_mat, vdim)
+    # 8. Reconstruct with all bundles
+    print('8. Reconstruct with all connectivity bundles...')
+    wm_inpainted_all, _ = interpolate_connectivity(fmri_coords, bundles_labels, lreg, 
+                                                   corr_mat, vdim, normalizing=normalizing)
 
+
+    # 9. Reconstruct only with bundles of interest intersecting with regions of interest
+    print('9. Reconstruct with connectivity of bundles of interest...')
     t_index_bundle = []
     for k in range(len(bundles_labels)):
         a,b = bundles_labels[k]
@@ -143,8 +148,8 @@ def pipeline_inpainting(path2probatlas='../atlas_data/fiber_atlas/probconnatlas/
     fmri_coords_t = [fmri_coords[t_index_bundle[k]] for k in range(len(t_index_bundle))]
     bundles_labels_t = [bundles_labels[t_index_bundle[k]] for k in range(len(t_index_bundle))]
 
-    # Reconstruct only with bundles of interest intersecting with regions of interest
-    wm_inpainted_rec, _ = interpolate_connectivity(fmri_coords_t, bundles_labels_t, lreg[t_index_bundle], corr_mat, vdim)
+    wm_inpainted_rec, _ = interpolate_connectivity(fmri_coords_t, bundles_labels_t, lreg[t_index_bundle], 
+                                                   corr_mat, vdim, normalizing=normalizing)
 
     save(inpaintpath+'/wm_inpainted_all.pkl', wm_inpainted_all)
     save(inpaintpath+'/wm_inpainted_rec.pkl', wm_inpainted_rec)
