@@ -50,6 +50,15 @@ def standardize(a):
 def demodulate(a):
     return a/a.max()
 
+def normalize(array):
+    ret = array - array.mean()
+    return ret / array.std()
+
+def range11(array):
+    scale = (array.max() + array.min())/2
+    ret = array - scale
+    return ret / array.max()
+
 def compute_stats(vol):
     m = vol[vol!=0].mean()
     std = vol[vol!=0].std()
