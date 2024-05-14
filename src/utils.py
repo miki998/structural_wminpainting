@@ -22,37 +22,64 @@ from nilearn import image
 from nilearn import datasets
 from nilearn import image as nimg
 from nilearn import plotting as nplot
-
 from nilearn.plotting import plot_epi, show
+from nilearn.connectome import ConnectivityMeasure
+from scipy.stats import pearsonr
 
 import torch
 import torch.nn as nn
+from typing import Optional
 
-### saving and loading made-easy
-def save(pickle_file, array):
+def save(pickle_filename:str, anything:Optional[np.ndarray]):
     """
     Pickle array
+
+    Parameters
+    ----------
+    pickle_filename : str
+        The filename to save the pickled array to
+    anything : Optional[np.ndarray]
+        The array to pickle
+
+    Returns
+    -------
+    None
     """
-    with open(pickle_file, 'wb') as handle:
-        pickle.dump(array, handle, protocol=pickle.HIGHEST_PROTOCOL)
-def load(pickle_file):
+
+    with open(pickle_filename, "wb") as handle:
+        pickle.dump(anything, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+def load(pickle_filename:str):
     """
-    Loading pickled array
+    Loads a pickled array from a file.
+
+    Parameters
+    ----------
+    pickle_filename : str
+        The path to the pickled file to load.
+
+    Returns
+    -------
+    b : Any
+        The unpickled object loaded from the file.
     """
-    with open(pickle_file, 'rb') as handle:
+
+    with open(pickle_filename, "rb") as handle:
         b = pickle.load(handle)
     return b
 
-def standardize(a):
+
+
+def normalize(a:np.ndarray):
+    tmp = a - np.mean(a)
+    return tmp / np.std(a)
+
+def standardize(a:np.ndarray):
     tmp = a - a.min()
     return tmp / tmp.max()
 
-def demodulate(a):
-    return a/a.max()
-
-def normalize(array):
-    ret = array - array.mean()
-    return ret / array.std()
+def demodulate(a:np.ndarray):
+    return a / a.max()
 
 def range11(array):
     scale = (array.max() + array.min())/2
@@ -64,124 +91,55 @@ def compute_stats(vol):
     std = vol[vol!=0].std()
     return m, std
 
-def proc_inpainted(vol, m_ref, std_ref, sparsifier=0.4):
-    tmp = deepcopy(vol)
-    m, std = compute_stats(tmp)
-    tmp[tmp!=0] = tmp[tmp!=0] / std * std_ref
-    tmp[tmp!=0] = tmp[tmp!=0] - m + m_ref
-    tmp = np.abs(tmp) ** (sparsifier) * np.sign(tmp)
-    return tmp
 
-def volcoord2mnicoord(arrays, affine):
+def volcoord2mnicoord(arrays: np.ndarray, affine: np.ndarray):
     """
-    Compute volume coords to mni coords transform
+    Compute volume coordinates to MNI coordinates transform.
+
+    Transforms a set of 3D volume coordinates to MNI coordinates using 
+    a provided affine transform matrix. The affine matrix maps between 
+    volume voxel indices and MNI coordinates.
+
+    Parameters
+    ----------
+    arrays : np.ndarray
+        The volume coordinate arrays to transform. Each coordinate is a row.
+    affine : np.ndarray 
+        The affine transform matrix mapping volume to MNI coordinates.
+
+    Returns
+    -------
+    ret : np.ndarray
+        The MNI coordinates corresponding to the input volume coordinates.
     """
-    # ret = []
-    # for arr in arrays:
-    #     ret.append(nimg.coord_transform(arr[0],arr[1],arr[2], affine))
-    tmp = np.concatenate([arrays,np.ones((arrays.shape[0],1))], axis=1)
-    ret = np.matmul(affine,tmp.T)[:3].T
+
+    tmp = np.concatenate([arrays, np.ones((arrays.shape[0], 1))], axis=1)
+    ret = np.matmul(affine, tmp.T)[:3].T
 
     return np.array(ret).astype(float)
 
-def mnicoord2volcoord(arrays, affine):
+def mnicoord2volcoord(arrays: np.ndarray, affine: np.ndarray):
     """
-    Compute volume coords from mni coords transform
-    """
-    inv_affine = np.linalg.inv(affine)
-    # ret = []
-    # for arr in arrays:
-    #     ret.append(nimg.coord_transform(arr[0],arr[1],arr[2], inv_affine))
-    tmp = np.concatenate([arrays,np.ones((arrays.shape[0],1))], axis=1)
-    ret = np.matmul(inv_affine,tmp.T)[:3].T
+    Compute volume coordinates from MNI coordinates.
 
-    return np.array(ret).astype(int)
+    Transforms MNI coordinates to equivalent volume coordinates using
+    the provided affine transform.
 
-def mean_fmri(nifti):
-    """
-    Compute mean (across time) fmri volume
-    """
-
-    affine = nifti.affine
-    volume = nifti.get_fdata()
-    mean_volume = volume.mean(axis=-1)
-    ret = nib.Nifti1Image(mean_volume, affine=affine)
-    return ret
-
-def abs_nifti(nifti):
-    """
-    Compute absolute value nifti file
-    """
-
-    affine = nifti.affine
-    volume = nifti.get_fdata()    
-    ret = nib.Nifti1Image(np.abs(volume), affine=affine)
-    return ret
-
-
-### NI-EDU - copied code "GLM inference"
-def design_variance(X, which_predictor=1):
-    ''' Returns the design variance of a predictor (or contrast) in X.
-    
     Parameters
     ----------
-    X : numpy array
-        Array of shape (N, P)
-    which_predictor : int or list/array
-        The index of the predictor you want the design var from.
-        Note that 0 refers to the intercept!
-        Alternatively, "which_predictor" can be a contrast-vector
-        (which will be discussed later this lab).
-        
+    arrays : np.ndarray
+        Array of MNI coordinates to transform.
+    affine : np.ndarray
+        Affine transform mapping from MNI space to volume space.
+
     Returns
     -------
-    des_var : float
-        Design variance of the specified predictor/contrast from X.
-    '''
-    
-    is_single = isinstance(which_predictor, int)
-    if is_single:
-        idx = which_predictor
-    else:
-        idx = np.array(which_predictor) != 0
-    
-    c = np.zeros(X.shape[1])
-    c[idx] = 1 if is_single == 1 else which_predictor[idx]
-    des_var = c.dot(np.linalg.inv(X.T.dot(X))).dot(c.T)
-    return des_var
+    np.ndarray
+        Array of transformed volume coordinates.
+    """
 
+    inv_affine = np.linalg.inv(affine)
+    tmp = np.concatenate([arrays, np.ones((arrays.shape[0], 1))], axis=1)
+    ret = np.matmul(inv_affine, tmp.T)[:3].T
 
-
-# table_t   = {}
-# residuals = {}
-# beta_fit  = {}
-# for b in range(len(select)):
-#     emotion    = select[b]
-#     emo_series = np.array(emo_df[emo_df.item==emotion]['score'])
-#     smoothened = overlap_add(emo_series, smfactor)
-#     z2         = zscore(smoothened[:n])
-#     y = deepcopy(z2)
-
-#     # regress solving
-#     X = regressors.T
-
-#     beta = (np.linalg.inv(np.matmul(X.T, X)) @ X.T) @ y
-
-#     y_hat_meter = X @ beta
-
-#     N = y.size
-#     P = X.shape[1]
-#     df = (N - P)
-    
-#     sigma_hat = np.sum((y - y_hat_meter) ** 2) / df
-#     design_variance_weight = design_variance(X, 1)
-    
-#     residuals[emotion] = sigma_hat
-#     # t-stats
-#     t_meter  = beta / np.sqrt(sigma_hat * design_variance_weight)
-
-#     # multiply by two to create a two-tailed p-value
-#     p_values = np.array([stats.t.sf(np.abs(t), df) * 2  for t in t_meter])
-
-#     table_t[emotion]  = (t_meter,p_values)
-#     beta_fit[emotion] = beta
+    return np.array(ret).astype(int)
