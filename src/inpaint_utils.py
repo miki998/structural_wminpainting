@@ -2,34 +2,40 @@ from ctypes import Union
 from src.utils import *
 from src.fiberatlas_utils import *
 
-
-def property_regularizer(x, C, norm='L2'):
+def property_regularizer(x, C, norm="L2"):
     """
-    Compute regularizer dependent on bundle property following:
-    - Lower consistency increase penalization
-    - Lower length increase penalization
-    - Lower number of streamlines increase penalization
+    Compute a regularizer value for a bundle property array x 
+    based on the given weighting array C and norm.
 
-    C vector's entries range in [0,1]
+    Lower values in C will penalize changes in x more strongly.
 
     Parameters
     ----------
+    x : ndarray
+        The bundle property array.
+    C : ndarray
+        The weighting array.
+    norm : str
+        The norm type to use. Can be 'L2', 'L1' or 'PL2'.
 
     Returns
-    -------
+    ------- 
+    ret : float
+        The computed regularizer value.
 
     """
-    inv_C = (1 / C)
-    if norm == 'L2':
+    inv_C = 1 / C
+    if norm == "L2":
         ret = ((inv_C * x) ** 2).sum() / C.shape[0]
-    elif norm == 'L1':
+    elif norm == "L1":
         ret = ((inv_C * x).abs()).sum() / C.shape[0]
-    elif norm == 'PL2':
+    elif norm == "PL2":
         # inv_C += 0.1 # buffer infinite
-        ret = (x.abs()**inv_C).sum() / C.shape[0]
+        ret = (x.abs() ** inv_C).sum() / C.shape[0]
     else:
-        print('Unsupported Norm')
+        print("Unsupported Norm")
     return ret
+
 
 def regress_linear(X, y, lbd, ridgeflag=True, verbose=False):
     # NOTE: y is of dimension (#regions,#TR)
@@ -50,9 +56,25 @@ def regress_linear(X, y, lbd, ridgeflag=True, verbose=False):
 
     Parameters
     ----------
+    X : ndarray
+        Design matrix with dimensions (#features, #samples) 
+    y : ndarray 
+        Response variable with dimensions (#regions, #timepoints)
+    lbd : float
+        Regularization strength 
+    ridgeflag : bool
+        Whether to use Ridge (True) or Lasso (False) regularization
+    verbose : bool
+        Whether to print progress 
 
     Returns
     -------
+    coefs : ndarray
+        Learned coefficients for each timepoint, (#features, #timepoints)
+    scores : ndarray 
+        Mean squared error on training set for each timepoint
+    intercepts : ndarray
+        Learned intercepts for each timepoint
 
     """
 
@@ -60,8 +82,8 @@ def regress_linear(X, y, lbd, ridgeflag=True, verbose=False):
     scores = []
     intercepts = []
     for tidx in tqdm(range(y.shape[1]), disable=not verbose):
-        yt = y[:,tidx]
-        
+        yt = y[:, tidx]
+
         if ridgeflag:
             clf = Ridge(alpha=lbd)
         else:
@@ -77,6 +99,7 @@ def regress_linear(X, y, lbd, ridgeflag=True, verbose=False):
     intercepts = np.array(intercepts)
 
     return coefs, scores, intercepts
+
 
 ######### NOTE: REMOVE IF NOT USED IN THE END FOR SATURATION ##########
 def scaled_sigmoid(x: np.ndarray, smin: float, smax: float, 
