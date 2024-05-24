@@ -102,12 +102,15 @@ def regress_linear(X, y, lbd, ridgeflag=True, verbose=False):
 
 
 ######### NOTE: REMOVE IF NOT USED IN THE END FOR SATURATION ##########
-def scaled_sigmoid(x: np.ndarray, smin: float, smax: float, 
-                   saturation_point:float=0.95, eps:float=0.2):
+def scaled_sigmoid(
+    x: np.ndarray,
+    smin: float,
+    smax: float,
+    saturation_point: float = 0.95,
+    eps: float = 0.2,
+):
     """
     Apply scaled sigmoid on an array with numpy
-
-    UNIT-TEST (TODO)
 
     sat_min, sat_max = -100, 40
     tmp = np.linspace(sat_min-50, sat_max+50, 1000)
@@ -123,10 +126,15 @@ def scaled_sigmoid(x: np.ndarray, smin: float, smax: float,
 
     Parameters
     ----------
+    x (np.ndarray): The input array to apply the scaled sigmoid to.
+    smin (float): The minimum value of the scaled sigmoid output.
+    smax (float): The maximum value of the scaled sigmoid output.
+    saturation_point (float, optional): The point at which the sigmoid function saturates, between 0 and 1. Defaults to 0.95.
+    eps (float, optional): A small value to prevent division by zero. Defaults to 0.2.
 
     Returns
     -------
-    fx : 
+    fx (np.ndarray): The input array `x` transformed by the scaled sigmoid function.
 
     """
 
