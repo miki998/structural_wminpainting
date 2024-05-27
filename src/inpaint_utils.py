@@ -262,7 +262,8 @@ def optimize_lreg(X, y, Ls, Lt, num_epochs=1000,
     else:
         return pred_activity
 
-def interpolate_activity(fmri_bundles, bundles_ij, rcomb, dim, normalizing=True, wmmask=None, verbose=True, probaflag=False):
+def interpolate_activity_old(fmri_bundles, bundles_ij, rcomb, dim, normalizing=True,
+                        wmmask=None, verbose=True, probaflag=False):
     """
     Interpolates fMRI activity along fiber bundles into a 3D volume.
 
@@ -311,4 +312,49 @@ def interpolate_activity(fmri_bundles, bundles_ij, rcomb, dim, normalizing=True,
         wm_inpainted_masked = wm_inpainted * wmmask
         wm_inpainted_masked[wm_inpainted_masked == 0] = -100000
     
-    return wm_inpainted, wm_inpainted_masked
+    return wm_inpainted, normalizing_matrix
+
+def interpolate_activity(fmri_bundles, bundles_ij, rcomb, dim, normalizing=True,
+                        wmmask=None, verbose=True):
+    """
+    Interpolates fMRI activity along fiber bundles into a 3D volume.
+
+    Parameters
+    ----------
+    fmri_bundles: List of 3D arrays, each array is a fMRI timeseries for a bundle
+    bundles_ij: List of tuples, each tuple is a pair of connected bundles 
+    rcomb: Combination weights for bundles
+    dim: Dimensions of output volume
+    normalizing: Whether to normalize voxel values 
+    wmmask: Optional white matter mask
+    verbose: Whether to print progress
+
+    Returns
+    -------
+    wm_inpainted: 3D volume with interpolated fMRI signal
+    wm_inpainted_masked: Masked version restricted to white matter
+    """
+
+    # Iterate across all the bundles and populate each voxels by the timcourses
+    wm_inpainted = np.zeros(dim)
+    wm_inpainted_masked = None
+    normalizing_matrix = np.zeros(dim) # Count number of times a voxel belonged to a bundle to average out
+    for k in tqdm(range(len(bundles_ij)), disable=not verbose):
+
+        volcoords = fmri_bundles[k][:,:3].astype(int)
+        wm_inpainted[volcoords[:,0], volcoords[:,1], volcoords[:,2]] += rcomb[k]
+        normalizing_matrix[volcoords[:,0], volcoords[:,1], volcoords[:,2]] += 1.0
+
+    normalizing_matrix[normalizing_matrix == 0] = np.inf
+    if normalizing:
+        wm_inpainted = wm_inpainted/np.abs(normalizing_matrix)    
+
+    # Out of bound encoding for backgrounds
+    wm_inpainted[wm_inpainted == 0] = -100000
+
+    if not wmmask is None:
+        # Apply a white matter mask if we care only about correct bundle masking
+        wm_inpainted_masked = wm_inpainted * wmmask
+        wm_inpainted_masked[wm_inpainted_masked == 0] = -100000
+    
+    return wm_inpainted, normalizing_matrix
