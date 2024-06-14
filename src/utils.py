@@ -1,3 +1,7 @@
+"""
+Copyright © 2024 Chun Hei Michael Chan, MIPLab EPFL
+"""
+
 import os
 import h5py
 import pickle

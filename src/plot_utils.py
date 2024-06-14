@@ -1,3 +1,7 @@
+"""
+Copyright © 2024 Chun Hei Michael Chan, MIPLab EPFL
+"""
+
 from src.utils import *
 
 def plot_compare_inpainting(list_inpaintings: list, coords_of_interest: np.ndarray, 

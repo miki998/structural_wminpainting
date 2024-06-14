@@ -1,4 +1,9 @@
+"""
+Copyright © 2024 Chun Hei Michael Chan, MIPLab EPFL
+"""
+
 from ctypes import Union
+
 from src.utils import *
 from src.fiberatlas_utils import *
 
@@ -314,8 +319,8 @@ def interpolate_activity_old(fmri_bundles, bundles_ij, rcomb, dim, normalizing=T
     
     return wm_inpainted, normalizing_matrix
 
-def interpolate_activity(fmri_bundles, bundles_ij, rcomb, dim, normalizing=True,
-                        wmmask=None, verbose=True):
+def interpolate_activity(fmri_bundles:np.ndarray, bundles_ij:list, rcomb:np.ndarray, dim:tuple, normalizing:bool=True,
+                        wmmask:Optional[np.ndarray]=None, verbose:bool=True, probaflag:bool=False):
     """
     Interpolates fMRI activity along fiber bundles into a 3D volume.
 
@@ -342,7 +347,11 @@ def interpolate_activity(fmri_bundles, bundles_ij, rcomb, dim, normalizing=True,
     for k in tqdm(range(len(bundles_ij)), disable=not verbose):
 
         volcoords = fmri_bundles[k][:,:3].astype(int)
-        wm_inpainted[volcoords[:,0], volcoords[:,1], volcoords[:,2]] += rcomb[k]
+        if probaflag:
+            coords_proba = fmri_bundles[k][:,3]
+            wm_inpainted[volcoords[:,0], volcoords[:,1], volcoords[:,2]] += rcomb[k] * coords_proba
+        else:
+            wm_inpainted[volcoords[:,0], volcoords[:,1], volcoords[:,2]] += rcomb[k]
         normalizing_matrix[volcoords[:,0], volcoords[:,1], volcoords[:,2]] += 1.0
 
     normalizing_matrix[normalizing_matrix == 0] = np.inf

@@ -1,3 +1,7 @@
+"""
+Copyright © 2024 Chun Hei Michael Chan, MIPLab EPFL
+"""
+
 from src.utils import *
 
 def get_aggprop(h5dict: h5py._hl.files.File, property: str):
