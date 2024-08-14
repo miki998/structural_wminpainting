@@ -366,4 +366,27 @@ def interpolate_activity(fmri_bundles:np.ndarray, bundles_ij:list, rcomb:np.ndar
         wm_inpainted_masked = wm_inpainted * wmmask
         wm_inpainted_masked[wm_inpainted_masked == 0] = -100000
     
-    return wm_inpainted, normalizing_matrix
+    return wm_inpainted, wm_inpainted_masked
+
+def volume_similarity(A:np.ndarray, B:np.ndarray):
+    """
+    Compute the similarity between two 3D volumes using Pearson correlation.
+    
+    Args:
+        A (np.ndarray): The first 3D volume.
+        B (np.ndarray): The second 3D volume.
+    
+    Returns:
+        np.ndarray: A 3D array of Pearson correlation coefficients between the corresponding elements of the input volumes.
+    """
+    
+    ret = np.zeros((A.shape[1:]))
+    for x in range(ret.shape[0]):
+        for y in range(ret.shape[1]):
+            for z in range(ret.shape[2]):
+                ret[x,y,z] = utils.pearsonr(A[:,x,y,z], B[:, x,y,z])[0]
+
+    ret = np.nan_to_num(ret)
+    ret[ret==0] = -100
+
+    return ret
