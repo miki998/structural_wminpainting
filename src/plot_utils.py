@@ -51,4 +51,4 @@ def plot_compare_inpainting(list_inpaintings: list, coords_of_interest: np.ndarr
                         cmap=cmap, vmin=vmin, vmax=vmax, draw_cross=draw_cross)
                 ax[r,c].set_title(inpaint_names[idx], color='white')
 
-    plt.suptitle(f'Bundle {int(np.ceil(thresh_subjapp))}% of subjects', color='white')
+    # plt.suptitle(f'Bundle {int(np.ceil(thresh_subjapp))}% of subjects', color='white')
